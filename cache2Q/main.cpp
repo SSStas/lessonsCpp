@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cerrno>
 #include "cache2Q.hpp"
+#include "bestCache.hpp"
 
 
 int getPageInt(int key) { return key; }
@@ -39,12 +40,14 @@ void checkTestInt2Q(int testNumber, std::string fileName) {
         file >> m >> n;
         assert(file.good());
         cache2q::Cache2q_t<int> c{m};
+        bestCache::bestCache_t<int> bc{m, n};
 
         for (int i = 0; i < n; ++i) {
             int q;
             file >> q;
             assert(file.good());
 
+            bc.addKey(q);
             if (c.appendTo2Q(q, getPageInt))
                 hits += 1;
         }
@@ -52,9 +55,13 @@ void checkTestInt2Q(int testNumber, std::string fileName) {
         file >> testHits;
 
         file.close();
-
+        
         std::cout << "Test number: " << testNumber << "; " << ("tests/" + fileName) << " " << 
             ((hits == testHits) ? "OK" : ("ERR (answer: " + std::to_string(testHits) + ")")) << std::endl;
+        
+        if (hits == testHits) {
+            std::cout << "2Qcache: " << hits << "; Best cache: " << bc.getHitsBestCache(getPageInt) << std::endl << std::endl;
+        }
     } else {
         perror("File open failed");
     }

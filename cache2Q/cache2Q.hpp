@@ -135,13 +135,13 @@ struct Cache2q_t {
         return true;
     }
 
-    void print() {
+    void print() const {
         fifoInSize.print();
         fifoOutSize.print();
         lru2Size.print();
     }
 
-    void printCache() {
+    void printCache() const {
         for (auto it = cache.begin(); it != cache.end(); ++it) {
             std::cout << it->data << " (" << 
                 ((it->name == FIFO_IN) ? "FifoIn" : ((it->name == FIFO_OUT) ? "FifoOut" : "Lru2")) << ")" << std::endl;
