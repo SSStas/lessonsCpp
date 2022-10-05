@@ -5,6 +5,7 @@
 #include <list>
 #include <unordered_map>
 #include <cassert>
+#include <map>
 
 namespace bestCache {
 
@@ -25,9 +26,7 @@ struct bestCache_t {
     std::unordered_map<KeyT, DataListIt> dataHash;
 
     // best cache
-    using ListIt = typename std::list<DataChain_t<T>>::iterator;
-    std::list<DataChain_t<T>> cache;
-    std::unordered_map<int, ListIt> hash;
+    std::multimap<int, T> cache;
 
     bestCache_t(size_t maxSize, int dataMaxSize): maxSize_(maxSize), dataMaxSize_(dataMaxSize) {}
 
@@ -45,45 +44,29 @@ struct bestCache_t {
     }
 
     template <typename F>
-    ListIt inputCacheValue(DataChain_t<KeyT> dataChain, F getPage) {
-        for (auto it = cache.begin(); it != cache.end(); ++it) {
-            if (dataChain.nextIndex <= it->nextIndex) {
-                cache.insert(it, dataChain);
-                return std::prev(it);
-            }
-        }
-
-        cache.insert(cache.end(), dataChain);
-        return std::prev(cache.end());
-    }
-
-    template <typename F>
     int getHitsBestCache(F getPage) {
         assert(maxSize_ > 0);
 
         int hits = 0, index = 0;
 
         for (auto dataIt = data.begin(); dataIt != data.end(); ++dataIt) {
-            auto hit = hash.find(index);
-
-            if (hit != hash.end()) {
+            
+            if (cache.size() >= 1 && cache.begin()->first == index) {
                 ++hits;
-                cache.erase(hit->second);
-                hash.erase(index);
+                cache.erase(cache.begin());
             }
             
             if (dataIt->nextIndex == -1) {
                 ++index;
                 continue;
             }
-
+            
             if (cache.size() + 1 > maxSize_) {
-                hash.erase((std::prev(cache.end()))->nextIndex);
-                cache.pop_back();
+                cache.erase(std::prev(cache.end()));
             }
-
-            hash[dataIt->nextIndex] = inputCacheValue(*dataIt, getPage);
-
+            
+            cache.insert(std::pair<int,T>(dataIt->nextIndex, getPage(dataIt->value)));
+            
             ++index;
         }
 
@@ -98,7 +81,7 @@ struct bestCache_t {
 
     void printCache() const {
         for (auto it = cache.begin(); it != cache.end(); ++it) {
-            std::cout << "value: " << it->value << "; nextIndex: " << it->nextIndex << std::endl;
+            std::cout << "value: " << it->second << "; nextIndex: " << it->first << std::endl;
         }
     }
 };

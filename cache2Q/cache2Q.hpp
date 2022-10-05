@@ -66,44 +66,30 @@ struct Cache2q_t {
     }
 
     template <typename F>
-    bool appendTo2Q(KeyT key, F getPage) {
-        assert(fifoOutSize.maxSize > 0);
-
-        auto hit = hash.find(key);
-
-        // not found
-        if (hit == hash.end()) {
-            
-            if (fifoInSize.isFull() && fifoOutSize.isFull()) {
+    void addNewElement(KeyT key, F getPage) {
+        if (fifoInSize.isFull() && fifoOutSize.isFull()) {
                 fifoOutSize.currentSize--;
                 hash.erase(std::prev(lru2Begin)->dataKey);
                 cache.erase(std::prev(lru2Begin));
             }
 
-            cache.push_front({(fifoInSize.maxSize > 0) ? FIFO_IN : FIFO_OUT, key, getPage(key)});
-            hash[key] = cache.begin();
+        cache.push_front({(fifoInSize.maxSize > 0) ? FIFO_IN : FIFO_OUT, key, getPage(key)});
+        hash[key] = cache.begin();
 
-            if (!fifoInSize.isFull()) {
-                fifoInSize.currentSize++;
-            } else if (!fifoOutSize.isFull()) {
-                fifoOutSize.currentSize++;
-                if (fifoOutSize.currentSize == 1) {
-                    fifoOutBegin = std::prev(lru2Begin);
-                } else {
-                    fifoOutBegin--;
-                }
-                fifoOutBegin->name = FIFO_OUT;
+        if (!fifoInSize.isFull()) {
+            fifoInSize.currentSize++;
+        } else if (!fifoOutSize.isFull()) {
+            fifoOutSize.currentSize++;
+            if (fifoOutSize.currentSize == 1) {
+                fifoOutBegin = std::prev(lru2Begin);
+            } else {
+                fifoOutBegin--;
             }
-            
-            return false;
-        }   
+            fifoOutBegin->name = FIFO_OUT;
+        }
+    }
 
-        
-        if (lru2Size.maxSize == 0) 
-            return true;
-
-        auto eltit = hit->second;
-
+    void moveExistElement(ListIt eltit) {
         if (eltit->name == FIFO_OUT) {
             fifoOutSize.currentSize--;
             eltit->name = LRU2;
@@ -131,6 +117,26 @@ struct Cache2q_t {
                 lru2Begin--;
             }
         }
+    }
+
+    template <typename F>
+    bool appendTo2Q(KeyT key, F getPage) {
+        assert(fifoOutSize.maxSize > 0);
+
+        auto hit = hash.find(key);
+
+        // not found
+        if (hit == hash.end()) {
+            addNewElement(key, getPage);
+            
+            return false; 
+        }   
+        
+        if (lru2Size.maxSize == 0) {
+            return true;
+        }
+
+        moveExistElement(hit->second);
         
         return true;
     }
